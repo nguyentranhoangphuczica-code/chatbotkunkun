@@ -1,34 +1,253 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chatbot Coze</title>
-
-  <!-- Nhúng SDK -->
-  <script src="https://sf-cdn.coze.com/obj/unpkg-va/flow-platform/chat-app-sdk/1.2.0-beta.6/libs/oversea/index.js"></script>
-</head>
-<body>
-  <h1>Thử chatbot Coze</h1>
-
-  <div id="chat-container"></div>
-
-  <script>
-    new CozeWebSDK.WebChatClient({
-      config: {
-        bot_id: '7560208977481777168', // thay đúng bot_id của bạn
-      },
-      componentProps: {
-        title: 'Coze',
-      },
-      auth: {
-        type: 'token',
-        token: 'pat_tlEhNTlZm8TTmDTd5JawnNLHyf6J2WxvOP9PTA30dPcouE3wYSq6rUtqfbPCw4lX', // KHÔNG để dạng ********
-        onRefreshToken: function () {
-          return 'pat_xxx_token_mới_nếu_có'
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coze Chatbot Interface</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://sf-cdn.coze.com/obj/unpkg-va/flow-platform/chat-app-sdk/1.0.0-beta.4/libs/oversea/index.js"></script>
+  <style>
+        body {
+            box-sizing: border-box;
         }
-      }
-    });
-  </script>
-</body>
+        
+        .chat-wrapper {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .chat-container {
+            flex: 1;
+            position: relative;
+            background: #f8fafc;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .coze-chat-container {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-gray-50">
+  <main class="h-full max-w-6xl mx-auto bg-white shadow-2xl">
+   <div class="chat-wrapper"><!-- Header -->
+    <div class="header-section">
+     <div class="max-w-2xl mx-auto">
+      <h1 id="page-title" class="text-3xl font-bold mb-2">Coze AI Chatbot</h1>
+      <p id="description" class="text-lg opacity-90 mb-4">Trò chuyện thông minh với AI được hỗ trợ bởi Coze</p>
+      <div class="status-badge">
+       <div class="status-dot"></div><span>Sẵn sàng trò chuyện</span>
+      </div>
+     </div>
+    </div><!-- Chat Container -->
+    <div class="chat-container">
+     <div id="loading-overlay" class="loading-overlay">
+      <div class="text-center">
+       <div class="loading-spinner mx-auto mb-4"></div>
+       <p class="text-gray-600">Đang khởi tạo chatbot...</p>
+      </div>
+     </div>
+     <div id="coze-chat" class="coze-chat-container"></div>
+    </div>
+   </div>
+  </main>
+  <script>
+        const defaultConfig = {
+            page_title: "Coze AI Chatbot",
+            description: "Trò chuyện thông minh với AI được hỗ trợ bởi Coze",
+            bot_id: "7168",
+            primary_color: "#667eea",
+            secondary_color: "#764ba2"
+        };
+
+        let chatClient = null;
+
+        function initializeCozeChat(botId) {
+            // Xóa chat cũ nếu có
+            const chatContainer = document.getElementById('coze-chat');
+            chatContainer.innerHTML = '';
+            
+            // Hiển thị loading
+            document.getElementById('loading-overlay').style.display = 'flex';
+            
+            try {
+                // Khởi tạo Coze WebSDK
+                chatClient = new CozeWebSDK.WebChatClient({
+                    config: {
+                        bot_id: botId || defaultConfig.bot_id,
+                    },
+                    componentProps: {
+                        title: 'Coze AI Assistant',
+                    },
+                    auth: {
+                        type: 'token',
+                        token: 'pat_tlEhNTlZm8TTmDTd5JawnNLHyf6J2WxvOP9PTA30dPcouE3wYSq6rUtqfbPCw4lX',
+                        onRefreshToken: function () {
+                            return 'pat_xxx_token_mới_nếu_có'
+                        }
+                    }
+                });
+                
+                // Mount chat vào container
+                chatClient.mount(chatContainer);
+                
+                // Ẩn loading sau 2 giây
+                setTimeout(() => {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Lỗi khởi tạo Coze chat:', error);
+                document.getElementById('loading-overlay').innerHTML = `
+                    <div class="text-center">
+                        <div class="text-red-500 text-6xl mb-4">⚠️</div>
+                        <p class="text-red-600 font-medium">Không thể khởi tạo chatbot</p>
+                        <p class="text-gray-500 text-sm mt-2">Vui lòng kiểm tra Bot ID và token</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Element SDK implementation
+        async function render(config) {
+            const pageTitleElement = document.getElementById('page-title');
+            const descriptionElement = document.getElementById('description');
+            
+            if (pageTitleElement) {
+                pageTitleElement.textContent = config.page_title || defaultConfig.page_title;
+            }
+            
+            if (descriptionElement) {
+                descriptionElement.textContent = config.description || defaultConfig.description;
+            }
+            
+            // Apply colors
+            const primaryColor = config.primary_color || defaultConfig.primary_color;
+            const secondaryColor = config.secondary_color || defaultConfig.secondary_color;
+            
+            const headerSection = document.querySelector('.header-section');
+            if (headerSection) {
+                headerSection.style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
+            }
+            
+            // Khởi tạo lại chat nếu bot_id thay đổi
+            const currentBotId = config.bot_id || defaultConfig.bot_id;
+            initializeCozeChat(currentBotId);
+        }
+
+        function mapToCapabilities(config) {
+            return {
+                recolorables: [
+                    {
+                        get: () => config.primary_color || defaultConfig.primary_color,
+                        set: (value) => {
+                            config.primary_color = value;
+                            if (window.elementSdk) {
+                                window.elementSdk.setConfig({ primary_color: value });
+                            }
+                        }
+                    },
+                    {
+                        get: () => config.secondary_color || defaultConfig.secondary_color,
+                        set: (value) => {
+                            config.secondary_color = value;
+                            if (window.elementSdk) {
+                                window.elementSdk.setConfig({ secondary_color: value });
+                            }
+                        }
+                    }
+                ],
+                borderables: [],
+                fontEditable: undefined,
+                fontSizeable: undefined
+            };
+        }
+
+        function mapToEditPanelValues(config) {
+            return new Map([
+                ["page_title", config.page_title || defaultConfig.page_title],
+                ["description", config.description || defaultConfig.description],
+                ["bot_id", config.bot_id || defaultConfig.bot_id]
+            ]);
+        }
+
+        // Initialize Element SDK
+        if (window.elementSdk) {
+            window.elementSdk.init({
+                defaultConfig,
+                render,
+                mapToCapabilities,
+                mapToEditPanelValues
+            });
+        }
+
+        // Initial render
+        document.addEventListener('DOMContentLoaded', function() {
+            render(defaultConfig);
+        });
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98fe931706fb3fa1',t:'MTc2MDY5MTMwMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
