@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chatbot Coze</title>
+
+  <!-- Nhúng SDK -->
+  <script src="https://sf-cdn.coze.com/obj/unpkg-va/flow-platform/chat-app-sdk/1.2.0-beta.6/libs/oversea/index.js"></script>
+</head>
+<body>
+  <h1>Thử chatbot Coze</h1>
+
+  <div id="chat-container"></div>
+
+  <script>
+    new CozeWebSDK.WebChatClient({
+      config: {
+        bot_id: '7560208977481777168', // thay đúng bot_id của bạn
+      },
+      componentProps: {
+        title: 'Coze',
+      },
+      auth: {
+        type: 'token',
+        token: 'pat_tlEhNTlZm8TTmDTd5JawnNLHyf6J2WxvOP9PTA30dPcouE3wYSq6rUtqfbPCw4lX', // KHÔNG để dạng ********
+        onRefreshToken: function () {
+          return 'pat_xxx_token_mới_nếu_có'
+        }
+      }
+    });
+  </script>
+</body>
+</html>
